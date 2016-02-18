@@ -190,6 +190,9 @@ public class BundleMojo extends ManifestPlugin {
 	@Parameter(defaultValue = "none", property = "signingServiceType")
 	protected String signingServiceType;
 
+	@Parameter(defaultValue = "1.0.0-SNAPSHOT", property = "ebr-tycho-extras-plugin.version", required = true)
+	protected String ebrTychoExtrasPluginVersionFallback;
+
 	@Parameter(defaultValue = "0.24", property = "tycho-plugin.version", required = true)
 	protected String tychoPluginVersionFallback;
 
@@ -235,6 +238,27 @@ public class BundleMojo extends ManifestPlugin {
 		} catch (final Exception e) {
 			throw new MojoExecutionException("Error assembling JAR " + jarName + ": " + e.getMessage(), e);
 		}
+	}
+
+	private void assembleP2Repository() throws MojoExecutionException {
+		// copy into output directory
+		getLog().debug("Assembling p2 repository...");
+
+		// @formatter:off
+		executeMojo(
+				plugin(
+						groupId("org.eclipse.ebr"),
+						artifactId("ebr-tycho-extras-plugin"),
+						version(detectPluginVersion("org.eclipse.ebr", "ebr-tycho-extras-plugin", ebrTychoExtrasPluginVersionFallback))),
+						goal("assemble-bundle-p2-repository"),
+						configuration(),
+						executionEnvironment(
+								project,
+								session,
+								pluginManager
+						)
+				);
+		// @formatter:on
 	}
 
 	private void buildBundle(final Set<Artifact> dependencies) throws MojoExecutionException {
@@ -380,6 +404,7 @@ public class BundleMojo extends ManifestPlugin {
 		buildSourceBundle(dependencies);
 		packAndSignBundle();
 		publishP2Metadata();
+		assembleP2Repository();
 	}
 
 	private File generateFinalBundleManifest() throws MojoExecutionException {
